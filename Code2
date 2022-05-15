@@ -1,0 +1,84 @@
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+%matplotlib inline
+import warnings
+warnings.filterwarnings('ignore')
+from datetime import datetime, timedelta
+import plotly.offline as py
+py.init_notebook_mode(connected=True)
+import plotly.graph_objs as go
+import plotly.tools as tls
+country_temp = pd.read_csv('GlobalLandTemperaturesByCountry.csv')
+state_temp = pd.read_csv('GlobalLandTemperaturesByState.csv')
+data=pd.read_csv("GlobalTemperatures.csv")
+country_temp
+country_temp.isnull().sum()
+filter_country = country_temp['dt'] > "1950-01-01"
+country_temp[filter_country]
+
+f_country = country_temp[filter_country]
+f_country.isnull().sum()
+f_country = f_country.dropna(how='any' ,axis=0)
+f_country.isnull().sum()
+f_country
+f_country.describe().transpose()
+final_f_country = f_country[~f_country['Country'].isin(['Denmark', 'Antarctica', 'France', 'Europe', 'Netherlands','United Kingdom', 'Africa', 'South America'])]
+final_f_country = final_f_country.replace(['Denmark (Europe)', 'France (Europe)', 'Netherlands (Europe)', 'United Kingdom (Europe)'],['Denmark', 'France', 'Netherlands', 'United Kingdom'])
+
+#Average temperature for each country
+countries = np.unique(final_f_country['Country'])
+avg_temp_list = []
+for country in countries:
+    avg_temp_list.append(final_f_country[final_f_country['Country'] == country]['AverageTemperature'].mean())
+state_temp.isnull().sum()
+filter_state = state_temp['dt'] > "1950-01-01"
+state_temp[filter_state]
+
+f_state = state_temp[filter_state]
+f_state.isnull().sum()
+f_state = f_state.dropna(how='any' ,axis=0)
+f_state.isnull().sum()
+f_state.describe().transpose()
+f_state.rename(columns={'dt' : 'Date'},inplace=True)
+f_state.head()
+f_state['Date'] = pd.to_datetime(f_state['Date'])
+f_state.set_index('Date',inplace = True)
+f_state.index
+f_state['year']= f_state.index.year
+f_state.head()
+f_state[['Country','AverageTemperature']].groupby(['Country']).mean().sort_values('AverageTemperature')
+final_f_state = f_state[['AverageTemperature']].resample('A').mean()
+final_f_state.head()
+#Viewing average temperatures per country
+
+data = [dict(type = 'choropleth',locations = countries,z = avg_temp_list,locationmode = 'country names',
+              text = countries,marker = dict(line = dict(color = 'rgb(0,0,0)', width = 1)),
+              colorbar = dict(autotick = True, tickprefix = '', title = '# Mean\nTemperature,\n°C'))]
+layout = dict(title = 'Avgerage land temperature in countries',
+              geo = dict(showframe = False,showocean = True,oceancolor = 'rgb(0,255,255)',
+                         projection = dict(type = 'orthographic',rotation = dict(lon = 60,lat = 10),),
+                         lonaxis =  dict(showgrid = True,gridcolor = 'rgb(102, 102, 102)'),
+                         lataxis = dict(showgrid = True,gridcolor = 'rgb(102, 102, 102)')),)
+fig = dict(data=data, layout=layout)
+py.iplot(fig, validate=False, filename='worldmap')
+data=data[["dt","LandAverageTemperature"]]
+data.head()
+data["dt"]=pd.to_datetime(data["dt"],format="%Y-%m-%d")
+data.info()
+data.set_index("dt",inplace=True)
+data.head()
+data.isnull().sum()
+data.fillna(method="ffill",inplace=True)
+data["month"]=data.index.month
+data["year"]=data.index.year
+data.head()
+import matplotlib.pyplot as plt
+import seaborn as sns
+%matplotlib inline 
+
+plt.rcParams["figure.figsize"]=(16,12)
+sns.lineplot(x="month",y="LandAverageTemperature",data=data)
+sns.boxplot(x="month",y="LandAverageTemperature",data=data)
+sns.lineplot(x="year",y="LandAverageTemperature",data=data)
